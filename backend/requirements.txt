@@ -8,3 +8,6 @@ python-dotenv
 scikit-learn
 transformers
 pandas
+passlib[bcrypt]
+python-jose[cryptography]
+motor
