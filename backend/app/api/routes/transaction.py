@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, status
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, status , Query
 from ...core.deps import get_current_user
 from ...db.mongo import db
 import pandas as pd
@@ -42,3 +42,41 @@ async def upload_csv(
     return {
         "message": f"Uploaded {len(result.inserted_ids)} transactions ✅"
     }
+
+@router.get("/")
+async def get_transactions(
+    current_user: dict = Depends(get_current_user),
+    limit: int = Query(50, description="Max transactions to return")
+):
+    cursor = db.transactions.find({"user_id": ObjectId(current_user["_id"])}).sort("date", -1).limit(limit)
+    transactions = []
+    async for tx in cursor:
+        tx["_id"] = str(tx["_id"])
+        tx["user_id"] = str(tx["user_id"])
+        tx["date"] = tx["date"].isoformat()
+        tx["created_at"] = tx["created_at"].isoformat()
+        transactions.append(tx)
+
+    return {"transactions": transactions}
+
+
+@router.get("/check-fraud")
+async def check_fraud(
+    current_user: dict = Depends(get_current_user)
+):
+    # Very simple rule: flag any single tx > $1000 as suspicious
+    cursor = db.transactions.find({
+        "user_id": ObjectId(current_user["_id"]),
+        "amount": {"$gt": 1000},
+        "is_fraud": False
+    })
+
+    flagged_ids = []
+    async for tx in cursor:
+        await db.transactions.update_one(
+            {"_id": tx["_id"]},
+            {"$set": {"is_fraud": True}}
+        )
+        flagged_ids.append(str(tx["_id"]))
+
+    return {"flagged_transactions": flagged_ids}
