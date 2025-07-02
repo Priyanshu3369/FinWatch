@@ -11,3 +11,4 @@ pandas
 passlib[bcrypt]
 python-jose[cryptography]
 motor
+pandas

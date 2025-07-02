@@ -1,10 +1,12 @@
 from fastapi import FastAPI , Depends
-from .api.routes import auth
+from .api.routes import auth ,transaction
 from .core.deps import get_current_user
 
 app = FastAPI()
 
 app.include_router(auth.router)
+app.include_router(transaction.router)
+
 
 @app.get("/")
 def root():
