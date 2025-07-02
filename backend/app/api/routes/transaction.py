@@ -5,6 +5,7 @@ import pandas as pd
 from bson import ObjectId
 from datetime import datetime , timezone
 from ...db.mongo import db
+from io import StringIO
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -18,7 +19,7 @@ async def upload_csv(
 
     contents = await file.read()
     try:
-        df = pd.read_csv(pd.compat.StringIO(contents.decode()))
+        df = pd.read_csv(StringIO(contents.decode()))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"CSV parsing error: {str(e)}")
 
@@ -28,10 +29,10 @@ async def upload_csv(
             "user_id": ObjectId(current_user["_id"]),
             "description": row.get("description") or "",
             "amount": float(row.get("amount") or 0),
-            "date": pd.to_datetime(row.get("date")).to_pydatetime() if row.get("date") else datetime.utcnow(),
+            "date": pd.to_datetime(row.get("date")).to_pydatetime() if row.get("date") else datetime.now(timezone.utc),
             "category": row.get("category") or None,
             "is_fraud": False,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         }
         transactions.append(tx)
 
@@ -114,7 +115,7 @@ async def budget_suggestion(
     suggestion = {
         "user_id": ObjectId(current_user["_id"]),
         "suggestion": suggestion_text,
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }
 
     await db.suggestions.insert_one(suggestion)
